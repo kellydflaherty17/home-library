@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home Library</title>
+
+<style>
+body {
+font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+margin: 0;
+background: #f7f4ef;
+color: #2c2c2c;
+}
+header {
+background: #d8cfc4;
+padding: 1rem;
+text-align: center;
+font-size: 1.4rem;
+font-weight: bold;
+}
+.container {
+padding: 1rem;
+max-width: 1000px;
+margin: auto;
+}
+.card {
+background: white;
+padding: 1rem;
+border-radius: 10px;
+margin-bottom: 1rem;
+box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+}
+button {
+background: #6d4c41;
+color: white;
+border: none;
+padding: 0.5rem 0.9rem;
+border-radius: 6px;
+cursor: pointer;
+margin: 3px 0;
+}
+button:hover { opacity: 0.9; }
+input, select, textarea {
+width: 100%;
+padding: 0.5rem;
+margin: 4px 0;
+border-radius: 6px;
+border: 1px solid #ccc;
+}
+.tabs button {
+margin-right: 5px;
+background: #a1887f;
+}
+.active-tab {
+background: #6d4c41 !important;
+}
+.hidden { display: none; }
+.book {
+border-top: 1px solid #eee;
+padding-top: 0.5rem;
+margin-top: 0.5rem;
+}
+</style>
+</head>
+
+<body>
+
+<header>Home Library</header>
+
+<div class="container">
+
+<div id="authSection">
+<button onclick="login()">Sign in with Google</button>
+</div>
+
+<div id="appSection" class="hidden">
+
+<div class="tabs">
+<button onclick="showTab('overview')" id="tab-overview" class="active-tab">Overview</button>
+<button onclick="showTab('kelly')" id="tab-kelly">Kelly</button>
+<button onclick="showTab('joey')" id="tab-joey">Joey</button>
+</div>
+
+<div id="overview" class="card"></div>
+
+<div id="kelly" class="card hidden"></div>
+<div id="joey" class="card hidden"></div>
+
+<div class="card">
+<h3>Add Book</h3>
+<input id="title" placeholder="Title">
+<input id="author" placeholder="Author">
+<input id="genre" placeholder="Genre">
+<button onclick="addBook()">Add Book</button>
+</div>
+
+<button onclick="logout()">Logout</button>
+
+</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyCm_tPy-rRqHOyKRxRLj8ISceUoDmzEM7A",
+authDomain: "home-library-kj.firebaseapp.com",
+projectId: "home-library-kj",
+storageBucket: "home-library-kj.firebasestorage.app",
+messagingSenderId: "130092975724",
+appId: "1:130092975724:web:42018948e0a99318523a49"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+window.login = async function() {
+const provider = new GoogleAuthProvider();
+await signInWithPopup(auth, provider);
+document.getElementById("authSection").classList.add("hidden");
+document.getElementById("appSection").classList.remove("hidden");
+loadBooks();
+}
+
+window.logout = async function() {
+await signOut(auth);
+location.reload();
+}
+
+window.showTab = function(tab) {
+["overview","kelly","joey"].forEach(t=>{
+document.getElementById(t).classList.add("hidden");
+document.getElementById("tab-"+t).classList.remove("active-tab");
+});
+document.getElementById(tab).classList.remove("hidden");
+document.getElementById("tab-"+tab).classList.add("active-tab");
+}
+
+window.addBook = async function() {
+const title = document.getElementById("title").value;
+const author = document.getElementById("author").value;
+const genre = document.getElementById("genre").value;
+
+if (!title) return alert("Title required");
+
+await addDoc(collection(db,"books"),{
+title,
+author,
+genre,
+created: new Date(),
+users: {
+kelly: { status:"TBR", rating:0, notes:"" },
+joey: { status:"TBR", rating:0, notes:"" }
+}
+});
+
+document.getElementById("title").value="";
+document.getElementById("author").value="";
+document.getElementById("genre").value="";
+loadBooks();
+}
+
+async function loadBooks() {
+const snapshot = await getDocs(collection(db,"books"));
+
+let kellyStats={finished:0,reading:0,tbr:0};
+let joeyStats={finished:0,reading:0,tbr:0};
+
+document.getElementById("kelly").innerHTML="";
+document.getElementById("joey").innerHTML="";
+
+snapshot.forEach(d=>{
+const b=d.data();
+
+renderUser("kelly",b,d.id,kellyStats);
+renderUser("joey",b,d.id,joeyStats);
+});
+
+document.getElementById("overview").innerHTML=
+"<h3>Overview</h3>"+
+"<strong>Kelly</strong><br>"+
+"Finished: "+kellyStats.finished+" | Reading: "+kellyStats.reading+" | TBR: "+kellyStats.tbr+"<br><br>"+
+"<strong>Joey</strong><br>"+
+"Finished: "+joeyStats.finished+" | Reading: "+joeyStats.reading+" | TBR: "+joeyStats.tbr;
+}
+
+function renderUser(user,b,id,stats){
+const u=b.users[user];
+
+if(u.status==="Finished") stats.finished++;
+if(u.status==="Reading") stats.reading++;
+if(u.status==="TBR") stats.tbr++;
+
+const container=document.getElementById(user);
+const div=document.createElement("div");
+div.className="book";
+
+div.innerHTML=
+"<strong>"+b.title+"</strong> by "+(b.author||"Unknown")+
+"<br>Status: "+
+"<select onchange=\"updateField('"+id+"','"+user+"','status',this.value)\">"+
+["TBR","Reading","Finished","DNF"].map(s=>
+"<option "+(u.status===s?"selected":"")+">"+s+"</option>"
+).join("")+
+"</select>"+
+"<br>Rating: "+
+"<select onchange=\"updateField('"+id+"','"+user+"','rating',this.value)\">"+
+[0,1,2,3,4,5].map(r=>
+"<option "+(u.rating==r?"selected":"")+">"+r+"</option>"
+).join("")+
+"</select>"+
+"<br>Notes:<textarea onchange=\"updateField('"+id+"','"+user+"','notes',this.value)\">"+u.notes+"</textarea>";
+
+container.appendChild(div);
+}
+
+window.updateField = async function(id,user,field,value){
+const ref=doc(db,"books",id);
+await updateDoc(ref,{
+["users."+user+"."+field]: field==="rating"?Number(value):value
+});
+loadBooks();
+}
+</script>
+
+</body>
+</html>
