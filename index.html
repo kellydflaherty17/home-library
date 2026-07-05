@@ -154,8 +154,8 @@ document.getElementById(tab).classList.remove("hidden");
 document.getElementById("tab-"+tab).classList.add("active-tab");
 }
 window.searchBooks = async function() {
-const query = document.getElementById("searchInput").value;
-if (!query) return;
+alert("Search Temporarily Disabled");
+}
 
 const resultsDiv = document.getElementById("searchResults");
 resultsDiv.innerHTML = "Searching...";
