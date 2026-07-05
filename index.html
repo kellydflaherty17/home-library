@@ -88,16 +88,7 @@ margin-top: 0.5rem;
 <div id="joey" class="card hidden"></div>
 
 <div class="card">
-<h3>Search & Add Book</h3>
-
-<input id="searchInput" placeholder="Search books by title..." />
-<button onclick="searchBooks()">Search</button>
-
-<div id="searchResults"></div>
-
-<hr style="margin:15px 0;">
-
-<h4>Manual Entry</h4>
+<h3>Add Book</h3>
 <input id="title" placeholder="Title">
 <input id="author" placeholder="Author">
 <input id="genre" placeholder="Genre">
@@ -110,8 +101,6 @@ margin-top: 0.5rem;
 </div>
 
 <script type="module">
-  console.log("Script loaded");
-  
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -130,16 +119,11 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 window.login = async function() {
-try {
 const provider = new GoogleAuthProvider();
 await signInWithPopup(auth, provider);
 document.getElementById("authSection").classList.add("hidden");
 document.getElementById("appSection").classList.remove("hidden");
 loadBooks();
-} catch (error) {
-console.error(error);
-alert(error.message);
-}
 }
 
 window.logout = async function() {
@@ -156,56 +140,6 @@ document.getElementById(tab).classList.remove("hidden");
 document.getElementById("tab-"+tab).classList.add("active-tab");
 }
 
-window.searchBooks = async function() {
-  alert("Search temporarily disabled");
-}
-const resultsDiv = document.getElementById("searchResults");
-resultsDiv.innerHTML = "Searching...";
-
-try {
-const response = await fetch(
-"https://www.googleapis.com/books/v1/volumes?q=" + encodeURIComponent(query) + "&key=AIzaSyCm_tPy-rRqHOyKRxRLj8ISceUoDmzEM7A"
-);
-const data = await response.json();
-
-resultsDiv.innerHTML = "";
-
-if (!data.items) {
-resultsDiv.innerHTML = "No results found.";
-return;
-}
-
-data.items.slice(0, 5).forEach(item => {
-const info = item.volumeInfo;
-const title = info.title || "Unknown";
-const author = info.authors ? info.authors.join(", ") : "Unknown";
-const genre = info.categories ? info.categories[0] : "";
-
-const cover = info.imageLinks?.thumbnail || "";
-
-const div = document.createElement("div");
-div.style.borderTop = "1px solid #eee";
-div.style.padding = "8px 0";
-div.style.cursor = "pointer";
-
-div.innerHTML =
-(cover ? `<img src="${cover}" style="height:60px;float:left;margin-right:10px;">` : "") +
-`<strong>${title}</strong><br>${author}<br><small>${genre}</small><div style="clear:both;"></div>`;
-
-div.onclick = () => {
-document.getElementById("title").value = title;
-document.getElementById("author").value = author;
-document.getElementById("genre").value = genre;
-resultsDiv.innerHTML = "";
-};
-
-resultsDiv.appendChild(div);
-});
-
-} catch (error) {
-resultsDiv.innerHTML = "Error searching books.";
-}
-};
 window.addBook = async function() {
 const title = document.getElementById("title").value;
 const author = document.getElementById("author").value;
