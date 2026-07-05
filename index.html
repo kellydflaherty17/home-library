@@ -128,11 +128,16 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 window.login = async function() {
+try {
 const provider = new GoogleAuthProvider();
 await signInWithPopup(auth, provider);
 document.getElementById("authSection").classList.add("hidden");
 document.getElementById("appSection").classList.remove("hidden");
 loadBooks();
+} catch (error) {
+console.error(error);
+alert(error.message);
+}
 }
 
 window.logout = async function() {
